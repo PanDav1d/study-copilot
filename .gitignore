@@ -1,0 +1,12 @@
+node_modules/
+.next/
+out/
+coverage/
+data/
+src/generated/
+.env
+.env.local
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store
+public/pdfjs/

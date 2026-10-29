@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Study Copilot</title>
+  <style>
+    :root {
+      --bg: #ffffff; --fg: #0a0a0a; --muted: #737373; --border: #e5e5e5; --card: #fafafa;
+      --primary: #171717; --primary-fg: #fafafa; --warn-bg: #fef3c7; --warn-fg: #92400e; --danger: #dc2626;
+      color-scheme: light dark;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #0a0a0a; --fg: #fafafa; --muted: #a3a3a3; --border: #262626; --card: #141414;
+        --primary: #fafafa; --primary-fg: #171717; --warn-bg: #422006; --warn-fg: #fcd34d; --danger: #f87171; }
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body { background: var(--bg); color: var(--fg); font: 14px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+      display: flex; align-items: center; justify-content: center; -webkit-user-select: none; user-select: none; }
+    main { width: 100%; max-width: 440px; padding: 32px 24px; }
+    .logo { width: 44px; height: 44px; border-radius: 11px; background: #171717; display: grid; place-items: center; margin-bottom: 20px; }
+    h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 6px; }
+    p { margin: 0 0 12px; color: var(--muted); }
+    code { display: block; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--fg); word-break: break-all; -webkit-user-select: text; user-select: text; margin: 0 0 16px; }
+    .stack { display: grid; gap: 8px; margin-top: 20px; }
+    button { height: 38px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--fg); font: inherit; font-weight: 500; cursor: pointer; padding: 0 16px; }
+    button:hover { background: var(--card); }
+    button.primary { background: var(--primary); color: var(--primary-fg); border-color: transparent; }
+    button.primary:hover { opacity: .9; }
+    button:disabled { opacity: .5; cursor: default; }
+    .note { margin-top: 20px; font-size: 12.5px; }
+    .warn { padding: 12px; border-radius: 8px; background: var(--warn-bg); color: var(--warn-fg); margin-bottom: 4px; }
+    .error { color: var(--danger); }
+    .spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--fg); border-radius: 50%; animation: spin .8s linear infinite; display: inline-block; vertical-align: -4px; margin-right: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="logo" aria-hidden="true">
+      <svg width="26" height="26" viewBox="0 0 32 32"><path d="M9 10.5c2.4-1 4.8-1 7 .6 2.2-1.6 4.6-1.6 7-.6v11c-2.4-1-4.8-1-7 .6-2.2-1.6-4.6-1.6-7-.6z" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/><path d="M16 11.1v11" stroke="#fff" stroke-width="1.8"/></svg>
+    </div>
+
+    <section id="loading">
+      <h1>Study Copilot</h1>
+      <p><span class="spinner"></span><span id="loading-text">Wird gestartet …</span></p>
+    </section>
+
+    <section id="folder" hidden>
+      <h1>Wo sollen deine Daten liegen?</h1>
+      <p>Sitzungen, Karteikarten, Probeklausuren und PDFs werden in einem Ordner gespeichert. Liegt er in iCloud Drive, sind deine Daten auf allen Macs synchron und gesichert.</p>
+      <div class="stack">
+        <button class="primary" id="use-icloud" hidden></button>
+        <button id="choose">Anderen Ordner wählen …</button>
+      </div>
+      <p class="note">Hast du schon Daten auf einem anderen Mac? Wähle einfach denselben Ordner – die App übernimmt alles. Öffne sie nur nicht auf zwei Macs gleichzeitig.</p>
+      <p class="note error" id="folder-error" hidden></p>
+    </section>
+
+    <section id="locked" hidden>
+      <h1>Auf einem anderen Mac geöffnet</h1>
+      <p class="warn" id="locked-text"></p>
+      <p>Arbeiten zwei Macs gleichzeitig mit derselben Datenbank, können über iCloud Änderungen verloren gehen. Beende die App dort und versuche es erneut.</p>
+      <div class="stack">
+        <button class="primary" id="retry">Erneut versuchen</button>
+        <button id="force">Trotzdem öffnen</button>
+        <button id="other-folder">Anderen Ordner wählen …</button>
+      </div>
+    </section>
+
+    <section id="failed" hidden>
+      <h1>Start fehlgeschlagen</h1>
+      <p class="error" id="failed-text"></p>
+      <div class="stack">
+        <button class="primary" id="failed-retry">Erneut versuchen</button>
+        <button id="failed-log" hidden>Log anzeigen</button>
+        <button id="failed-folder">Anderen Ordner wählen …</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const { invoke } = window.__TAURI__.core;
+    const $ = (id) => document.getElementById(id);
+    const sections = ["loading", "folder", "locked", "failed"];
+    const show = (name) => sections.forEach((s) => ($(s).hidden = s !== name));
+
+    async function boot(force = false) {
+      show("loading");
+      $("loading-text").textContent = "Wird gestartet …";
+      const slow = setTimeout(() => ($("loading-text").textContent = "Daten werden geladen – bei iCloud kann das kurz dauern …"), 4000);
+      let res;
+      try {
+        res = await invoke("boot", { force });
+      } catch (e) {
+        res = { state: "failed", message: String(e) };
+      } finally {
+        clearTimeout(slow);
+      }
+      if (res.state === "ready") {
+        location.replace(res.url);
+      } else if (res.state === "needsFolder") {
+        showFolder(res.suggested);
+      } else if (res.state === "locked") {
+        const min = Math.max(1, Math.round(res.secondsAgo / 60));
+        $("locked-text").textContent = `„${res.host}“ hat diesen Ordner gerade geöffnet (Lebenszeichen vor ${min} Min.).`;
+        show("locked");
+      } else {
+        $("failed-text").textContent = res.message;
+        $("failed-log").hidden = !res.log;
+        $("failed-log").onclick = () => invoke("reveal", { path: res.log });
+        show("failed");
+      }
+    }
+
+    function showFolder(suggested) {
+      $("folder-error").hidden = true;
+      const icloud = $("use-icloud");
+      icloud.hidden = !suggested;
+      if (suggested) {
+        icloud.textContent = "In iCloud Drive speichern";
+        icloud.title = suggested;
+        icloud.onclick = () => pick(() => invoke("use_folder", { path: suggested }));
+      }
+      show("folder");
+    }
+
+    async function pick(action) {
+      try {
+        const chosen = await action();
+        if (chosen) boot();
+      } catch (e) {
+        $("folder-error").textContent = String(e);
+        $("folder-error").hidden = false;
+        show("folder");
+      }
+    }
+
+    const chooseOther = () => { show("folder"); pick(() => invoke("choose_folder")); };
+    $("choose").onclick = () => pick(() => invoke("choose_folder"));
+    $("retry").onclick = () => boot();
+    $("force").onclick = () => boot(true);
+    $("other-folder").onclick = chooseOther;
+    $("failed-retry").onclick = () => boot();
+    $("failed-folder").onclick = chooseOther;
+
+    boot();
+  </script>
+</body>
+</html>

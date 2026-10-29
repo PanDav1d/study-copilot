@@ -1,0 +1,15 @@
+services:
+  study-copilot:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET (openssl rand -base64 48)}
+      ALLOW_REGISTRATION: "false"
+      MAX_UPLOAD_MB: "50"
+    volumes:
+      - study-data:/data
+
+volumes:
+  study-data:

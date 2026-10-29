@@ -1,0 +1,240 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* Neutral palette in the style of shadcn/ui (zinc) – colour is reserved for meaning. */
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.52 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.904 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --accent: oklch(0.967 0.001 286);
+  --accent-foreground: oklch(0.205 0 0);
+  --sidebar: oklch(0.985 0.001 106);
+  --sidebar-accent: oklch(0.945 0.001 106);
+  --danger: oklch(0.577 0.245 27.3);
+  --success: oklch(0.6 0.13 163);
+  --warning: oklch(0.77 0.16 70);
+  --link: oklch(0.52 0.19 259);
+  --chart: oklch(0.6 0.17 259);
+  --ring: oklch(0.708 0 0);
+  --cornell-cue: oklch(0.985 0.001 106);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.17 0 0);
+  --muted: oklch(0.235 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --sidebar: oklch(0.17 0 0);
+  --sidebar-accent: oklch(0.255 0 0);
+  --danger: oklch(0.704 0.191 22.2);
+  --success: oklch(0.7 0.14 163);
+  --warning: oklch(0.8 0.14 75);
+  --link: oklch(0.72 0.14 254);
+  --chart: oklch(0.65 0.15 259);
+  --ring: oklch(0.556 0 0);
+  --cornell-cue: oklch(0.185 0 0);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-link: var(--link);
+  --color-chart: var(--chart);
+  --color-ring: var(--ring);
+  --color-cornell-cue: var(--cornell-cue);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--color-link) 22%, transparent);
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+/* Rendered markdown */
+.prose-study {
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.prose-study > * + * { margin-top: 0.6em; }
+.prose-study h1 { font-size: 1.35em; font-weight: 650; margin-top: 1em; }
+.prose-study h2 { font-size: 1.18em; font-weight: 650; margin-top: 1em; }
+.prose-study h3 { font-size: 1.05em; font-weight: 600; margin-top: 0.9em; }
+.prose-study ul { list-style: disc; padding-left: 1.3em; }
+.prose-study ol { list-style: decimal; padding-left: 1.4em; }
+.prose-study li + li { margin-top: 0.2em; }
+.prose-study a { color: var(--color-link); text-decoration: underline; text-decoration-color: color-mix(in oklab, var(--color-link) 40%, transparent); text-underline-offset: 3px; }
+.prose-study code { font-family: var(--font-mono); font-size: 0.88em; background: var(--color-muted); padding: 0.1em 0.35em; border-radius: 0.3em; }
+.prose-study pre { background: var(--color-muted); padding: 0.8em 1em; border-radius: 0.5em; overflow-x: auto; }
+.prose-study pre code { background: none; padding: 0; }
+.prose-study blockquote { border-left: 3px solid var(--color-border); padding-left: 0.9em; color: var(--color-muted-foreground); }
+.prose-study table { display: block; overflow-x: auto; border-collapse: collapse; max-width: 100%; font-size: 0.92em; overflow-wrap: normal; }
+.prose-study th, .prose-study td { border: 1px solid var(--color-border); padding: 0.35em 0.6em; text-align: left; }
+.prose-study th { background: var(--color-muted); font-weight: 600; }
+.prose-study hr { border-color: var(--color-border); }
+.prose-study input[type="checkbox"] { margin-right: 0.4em; }
+
+/* Card flip in the review area */
+.flip-in { animation: flip-in 180ms ease-out; }
+@keyframes flip-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flip-in { animation: none; }
+}
+
+/* Confetti burst (see <Celebration />) */
+.confetti { animation: confetti-fall 1.6s cubic-bezier(0.2, 0.6, 0.4, 1) forwards; }
+@keyframes confetti-fall {
+  0% { transform: translate3d(0, 0, 0) rotate(0); opacity: 1; }
+  100% { transform: translate3d(var(--drift), 105vh, 0) rotate(var(--spin)); opacity: 0.9; }
+}
+
+/* "+5 XP" floating up in the review session */
+.xp-float { animation: xp-float 900ms ease-out forwards; }
+@keyframes xp-float {
+  0% { transform: translateY(4px); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translateY(-22px); opacity: 0; }
+}
+
+/* Gentle pop for a growing combo */
+.pop { animation: pop 260ms ease-out; }
+@keyframes pop {
+  0% { transform: scale(0.85); }
+  60% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .xp-float, .pop { animation: none; }
+}
+
+/* PDF viewer (components/pdf) – page, canvas and pdf.js text layer */
+.pdf-page {
+  background: #fff;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.06), 0 4px 14px -4px rgb(0 0 0 / 0.12);
+  contain: layout paint;
+}
+.dark .pdf-page { box-shadow: 0 0 0 1px rgb(255 255 255 / 0.06), 0 6px 20px -6px rgb(0 0 0 / 0.6); }
+.pdf-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.pdf-skeleton { background: linear-gradient(100deg, #fff 30%, #f3f3f3 50%, #fff 70%) 0 0 / 300% 100%; animation: pdf-shimmer 1.4s ease-in-out infinite; }
+@keyframes pdf-shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) { .pdf-skeleton { animation: none; } }
+/* "Dark pages": inverted paper, colours keep their hue. */
+.pdf-invert .pdf-page { background: #1b1b1b; }
+.pdf-invert .pdf-canvas-wrap { filter: invert(0.92) hue-rotate(180deg); }
+.pdf-invert .pdf-skeleton { background: #1b1b1b; animation: none; filter: none; }
+.pdf-link { border-radius: 2px; }
+.pdf-link:hover { background: color-mix(in oklab, var(--color-link) 14%, transparent); box-shadow: 0 0 0 1px color-mix(in oklab, var(--color-link) 35%, transparent); }
+
+.textLayer {
+  position: absolute; text-align: initial; inset: 0; overflow: clip; opacity: 1; line-height: 1;
+  text-size-adjust: none; forced-color-adjust: none; transform-origin: 0 0; caret-color: CanvasText; z-index: 1;
+}
+.textLayer :is(span, br) { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; }
+.textLayer > :not(.markedContent), .textLayer .markedContent span:not(.markedContent) { z-index: 1; }
+.textLayer span.markedContent { top: 0; height: 0; }
+.textLayer ::selection { background: color-mix(in srgb, #2563eb 30%, transparent); }
+.textLayer br::selection { background: transparent; }
+.textLayer mark { color: transparent; background: rgb(250 204 21 / 0.45); border-radius: 2px; padding: 1px 0; margin: -1px 0; }
+.textLayer mark.selected { background: rgb(249 115 22 / 0.6); box-shadow: 0 0 0 2px rgb(249 115 22 / 0.5); }
+.textLayer .endOfContent { display: block; position: absolute; inset: 100% 0 0; z-index: 0; cursor: default; user-select: none; }
+.textLayer.selecting .endOfContent { top: 0; }
+.textLayer[data-main-rotation="90"] { transform: rotate(90deg) translateY(-100%); }
+.textLayer[data-main-rotation="180"] { transform: rotate(180deg) translate(-100%, -100%); }
+.textLayer[data-main-rotation="270"] { transform: rotate(270deg) translateX(-100%); }
+
+/* Workspace (components/shell/workspace.tsx): height below the shell chrome.
+   --content-h: room for the page; --pane-h: what a full-height page (PDF) may use. */
+.workspace-content { --content-h: calc(100dvh - 3rem - 3.5rem - env(safe-area-inset-bottom)); }
+@media (width >= 48rem) { .workspace-content { --content-h: calc(100dvh - 5.5rem - 3.5rem - env(safe-area-inset-bottom)); } }
+@media (width >= 64rem) { .workspace-content { --content-h: calc(100dvh - 5.5rem); } }
+.pane-main { --pane-h: var(--content-h); }
+@media (width >= 48rem) { .pane-main.is-split { --pane-h: calc(var(--content-h) - 2.25rem); } }
+/* While the split divider is dragged: no text selection, resize cursor everywhere. */
+.is-resizing, .is-resizing * { cursor: col-resize !important; user-select: none !important; }
+
+/* Images in notes and cards (pasted screenshots, PDF snippets) */
+.prose-study .md-image { display: block; max-width: 100%; max-height: 28rem; height: auto; border-radius: 0.5rem; border: 1px solid var(--color-border); background: #fff; cursor: zoom-in; transition: box-shadow 150ms; }
+.prose-study .md-image:hover { box-shadow: 0 4px 16px -4px rgb(0 0 0 / 0.2); }
+.prose-study p:has(> .md-image) { margin-top: 0.75em; }
+
+/* Exam topics: ticked-off task list items (components/checklist-markdown.tsx) */
+.prose-study .contains-task-list { list-style: none; padding-left: 0.2em; }
+.prose-study .contains-task-list .contains-task-list { padding-left: 1.5em; }
+.checklist .task-list-item:is(:has(> [aria-checked="true"]), :has(> p > [aria-checked="true"])) { color: var(--color-muted-foreground); }
+.checklist .task-list-item:is(:has(> [aria-checked="false"]), :has(> p > [aria-checked="false"])) { color: var(--color-foreground); }
+
+/* Printing (⌘P): the page only, on white paper – a Cornell sheet prints with both columns. */
+@media print {
+  @page { margin: 14mm 12mm; }
+  html.dark {
+    color-scheme: light;
+    --background: oklch(1 0 0); --foreground: oklch(0.145 0 0); --card: oklch(1 0 0); --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.45 0 0); --border: oklch(0.88 0 0); --cornell-cue: oklch(0.97 0.001 106); --link: oklch(0.45 0.19 259);
+  }
+  body { background: #fff; }
+  [data-sonner-toaster] { display: none !important; }
+  .pane-main { max-width: none !important; padding: 0 !important; }
+  [role="row"] { break-inside: avoid; }
+}

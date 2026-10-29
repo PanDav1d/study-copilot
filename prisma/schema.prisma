@@ -1,0 +1,392 @@
+// DHBW Study Copilot – data model
+//
+// Hierarchy: User → Semester → Module → Note (= Sitzung: one lecture day as a Cornell sheet)
+// Cross-cutting: Flashcard (FSRS state) + ReviewLog, Document (PDF), CalendarEvent,
+// practice exams: Exam + ExamAttempt, gamification: XpEvent (ledger) + UserAchievement.
+//
+// Every user-owned row carries a `userId`. This is intentionally redundant to the
+// hierarchy: it lets every query be scoped with a simple `where: { id, userId }`
+// and makes authorisation mistakes much harder.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // FSRS scheduler settings
+  requestRetention Float   @default(0.9)
+  maximumInterval  Int     @default(365)
+  enableFuzz       Boolean @default(true)
+  dailyNewLimit    Int     @default(20)
+  dailyXpGoal      Int     @default(50)
+
+  semesters      Semester[]
+  modules        Module[]
+  notes          Note[]
+  flashcards     Flashcard[]
+  reviewLogs     ReviewLog[]
+  documents      Document[]
+  calendarEvents CalendarEvent[]
+  xpEvents       XpEvent[]
+  achievements   UserAchievement[]
+  exams          Exam[]
+  examAttempts   ExamAttempt[]
+  attachments    Attachment[]
+  focusSessions  FocusSession[]
+}
+
+model Semester {
+  id        String    @id @default(cuid())
+  userId    String
+  name      String
+  number    Int?
+  startDate DateTime?
+  endDate   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  modules   Module[]
+  documents Document[]
+
+  @@index([userId])
+}
+
+model Module {
+  id          String   @id @default(cuid())
+  userId      String
+  semesterId  String
+  name        String
+  code        String?
+  lecturer    String?
+  ects        Int?
+  color       String   @default("indigo")
+  description String   @default("")
+  /// Usual lecture room – pre-filled as location of the module's calendar events.
+  room        String?
+
+  // Exam information
+  examDate     DateTime?
+  examType     String? // KLAUSUR | MUENDLICH | HAUSARBEIT | PROJEKT | PRAESENTATION | PORTFOLIO | SONSTIGE
+  examDuration Int? // minutes
+  examLocation String?
+  examTopics   String   @default("")
+  examNotes    String   @default("")
+  /// Modules that end in one shared exam carry the same group id. Their exam
+  /// fields are kept identical on every save, so each module stays self-contained.
+  examGroupId  String?
+  /// Free-form exam-prep note for the whole module: one place to collect and
+  /// write down everything for the summary. Plain Markdown, no Cornell structure.
+  summaryNote  String   @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  semester       Semester        @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+  notes          Note[]
+  flashcards     Flashcard[]
+  documents      Document[]
+  calendarEvents CalendarEvent[]
+  exams          Exam[]
+  focusSessions  FocusSession[]
+
+  @@index([userId])
+  @@index([semesterId])
+  @@index([examGroupId])
+}
+
+/// A Sitzung: one lecture day of a module, written down as a Cornell sheet.
+/// The sheet is a list of rows, each pairing a cue (keyword or question, left)
+/// with the notes that answer it (right), plus a summary at the bottom.
+/// `sections` holds the rows as JSON [{ id, cue, content }], saved atomically.
+model Note {
+  id        String    @id @default(cuid())
+  userId    String
+  moduleId  String
+  title     String    @default("") // optional topic – a session is identified by its date
+  date      DateTime
+  sections  String    @default("[]")
+  summary   String    @default("")
+  /// Last completed recall run (Cornell "Recite") and its share of known rows.
+  recallAt    DateTime?
+  recallScore Float?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module         Module          @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  documents      NoteDocument[]
+  flashcards     Flashcard[]
+  calendarEvents CalendarEvent[]
+
+  @@index([userId, date])
+  @@index([moduleId, date])
+}
+
+model Flashcard {
+  id        String   @id @default(cuid())
+  userId    String
+  moduleId  String
+  noteId    String?
+  front     String
+  back      String
+  topic     String?
+  suspended Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // FSRS memory state (mirrors ts-fsrs `Card`)
+  due           DateTime  @default(now())
+  stability     Float     @default(0)
+  difficulty    Float     @default(0)
+  elapsedDays   Int       @default(0)
+  scheduledDays Int       @default(0)
+  learningSteps Int       @default(0)
+  reps          Int       @default(0)
+  lapses        Int       @default(0)
+  state         Int       @default(0) // 0 New, 1 Learning, 2 Review, 3 Relearning
+  lastReview    DateTime?
+
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module     Module              @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  note       Note?               @relation(fields: [noteId], references: [id], onDelete: SetNull)
+  reviewLogs ReviewLog[]
+  documents  FlashcardDocument[]
+
+  @@index([userId, due])
+  @@index([moduleId, due])
+  @@index([noteId])
+}
+
+/// One review of a flashcard. Stores the card state *before* the review
+/// (as ts-fsrs does), which allows exact rollback ("undo").
+model ReviewLog {
+  id              String   @id @default(cuid())
+  userId          String
+  flashcardId     String
+  rating          Int // 1 Again, 2 Hard, 3 Good, 4 Easy
+  state           Int
+  due             DateTime
+  stability       Float
+  difficulty      Float
+  elapsedDays     Int
+  lastElapsedDays Int
+  scheduledDays   Int
+  learningSteps   Int
+  review          DateTime
+  durationMs      Int?
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flashcard Flashcard @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
+
+  @@index([userId, review])
+  @@index([flashcardId, review])
+}
+
+model Document {
+  id           String   @id @default(cuid())
+  userId       String
+  semesterId   String?
+  moduleId     String?
+  title        String
+  description  String   @default("")
+  originalName String
+  storageKey   String   @unique
+  mimeType     String
+  size         Int
+  sha256       String
+  /// Reading position of the PDF viewer (1-based) and the page count it saw.
+  lastPage     Int       @default(1)
+  pageCount    Int       @default(0)
+  lastOpenedAt DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  semester       Semester?           @relation(fields: [semesterId], references: [id], onDelete: SetNull)
+  module         Module?             @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  notes          NoteDocument[]
+  flashcards     FlashcardDocument[]
+  calendarEvents CalendarEvent[]
+  attachments    Attachment[]
+
+  @@index([userId, createdAt])
+  @@index([moduleId])
+}
+
+/// Image in notes or flashcards: a pasted screenshot or a region cut out of a PDF page.
+model Attachment {
+  id         String   @id @default(cuid())
+  userId     String
+  /// PDF (and page) the image was cut from, if any.
+  documentId String?
+  page       Int?
+  storageKey String   @unique
+  mimeType   String
+  size       Int
+  createdAt  DateTime @default(now())
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+}
+
+/// A finished Pomodoro focus block – the basis of the study-time statistics.
+model FocusSession {
+  id        String   @id @default(cuid())
+  userId    String
+  moduleId  String?
+  startedAt DateTime
+  minutes   Int
+  createdAt DateTime @default(now())
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module Module? @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+
+  @@index([userId, startedAt])
+}
+
+/// A PDF linked to a session (n:m – e.g. one script is used in many sessions).
+model NoteDocument {
+  noteId     String
+  documentId String
+  createdAt  DateTime @default(now())
+
+  note     Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@id([noteId, documentId])
+  @@index([documentId])
+}
+
+model FlashcardDocument {
+  flashcardId String
+  documentId  String
+  createdAt   DateTime @default(now())
+
+  flashcard Flashcard @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
+  document  Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@id([flashcardId, documentId])
+  @@index([documentId])
+}
+
+/// Calendar entry. `type` = LECTURE (Lehrveranstaltung), STUDY (eigene Lerneinheit),
+/// DEADLINE or OTHER. Exams are derived from Module.examDate (single source of truth).
+/// A lecture event can point to its session (`noteId`).
+model CalendarEvent {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   @default("LECTURE")
+  title       String
+  description String   @default("")
+  location    String?
+  start       DateTime
+  end         DateTime
+  allDay      Boolean  @default(false)
+  completed   Boolean  @default(false)
+  // Groups events that were created together as a weekly series
+  seriesId    String?
+  // Stable id of an imported event (iCal UID + occurrence) – re-imports update instead of duplicating
+  externalId  String?
+
+  moduleId   String?
+  noteId     String?
+  documentId String?
+  // Study sessions may focus on a flashcard topic of the module
+  topic      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module   Module?   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  note     Note?     @relation(fields: [noteId], references: [id], onDelete: SetNull)
+  document Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([userId, start])
+  @@index([moduleId])
+  @@index([noteId])
+  @@index([seriesId])
+  @@unique([userId, externalId])
+}
+
+/// XP ledger. Level, daily goal and streak are derived from it.
+/// (`reason`, `refId`) makes one-time rewards (e.g. "summary written" for a
+/// session) idempotent.
+model XpEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    Int
+  reason    String
+  refId     String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, reason, refId])
+  @@index([userId, createdAt])
+}
+
+model UserAchievement {
+  userId     String
+  key        String
+  unlockedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, key])
+}
+
+/// Practice exam (Probeklausur), typically generated externally and pasted in.
+/// `questions` holds the normalised questions as JSON (see src/lib/exam.ts);
+/// they are immutable so attempts stay comparable.
+model Exam {
+  id        String   @id @default(cuid())
+  userId    String
+  moduleId  String
+  title     String
+  timeLimit Int? // minutes
+  questions String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module   Module        @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  attempts ExamAttempt[]
+
+  @@index([userId])
+  @@index([moduleId])
+}
+
+/// One completed run of a practice exam. `answers` is JSON keyed by question id.
+model ExamAttempt {
+  id          String   @id @default(cuid())
+  userId      String
+  examId      String
+  answers     String
+  score       Float
+  maxScore    Float
+  durationSec Int
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@index([examId, createdAt])
+  @@index([userId, createdAt])
+}

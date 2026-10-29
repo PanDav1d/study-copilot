@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Start screen (local page only – the app itself runs on 127.0.0.1 without IPC access).",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

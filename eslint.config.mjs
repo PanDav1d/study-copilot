@@ -1,0 +1,15 @@
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTs from "eslint-config-next/typescript";
+
+const config = [
+  ...nextVitals,
+  ...nextTs,
+  { ignores: [".next/**", "node_modules/**", "src/generated/**", "data/**", "desktop/build/**", "desktop/target/**", "desktop/gen/**", "public/pdfjs/**"] },
+  {
+    rules: {
+      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_", ignoreRestSiblings: true }],
+    },
+  },
+];
+
+export default config;
